@@ -16,7 +16,7 @@ export const Scroll: React.FC<ScrollProps> = ({ isOpen, imageUrl, onAnimationCom
   const dragStartRef = useRef<{ x: number, w: number, o: number } | null>(null);
 
   // Helper to get max width based on screen size
-  const getMaxWidth = () => Math.min(window.innerWidth * 0.8, 1000);
+  const getMaxWidth = () => Math.min(window.innerWidth * 0.8, 1600);
 
   // Handle Auto-Open / Close triggers from parent
   useEffect(() => {
@@ -179,10 +179,10 @@ export const Scroll: React.FC<ScrollProps> = ({ isOpen, imageUrl, onAnimationCom
           {/* We position this centered. As the parent narrows, this is clipped. */}
           <div 
             className="relative z-10 h-full flex items-center justify-center shrink-0"
-            style={{ width: 'min(80vw, 1000px)' }}
+            style={{ width: 'min(80vw, 1600px)' }}
           >
              {imageUrl && (
-               <div className="relative w-full h-full shadow-none bg-transparent flex items-center justify-center overflow-hidden">
+               <div className="relative w-[95%] h-[86%] shadow-none bg-transparent flex items-center justify-center overflow-hidden">
                  <img 
                    src={imageUrl} 
                    alt="Ancient Painting" 
