@@ -175,13 +175,10 @@ export const Scroll: React.FC<ScrollProps> = ({ isOpen, imageUrl, onAnimationCom
           <div className="absolute inset-0 opacity-20 pointer-events-none z-10" 
                style={{backgroundImage: `url("https://www.transparenttextures.com/patterns/cream-paper.png")`}}></div>
           
-          {/* Inner Silk Border (Mounting) - Changed to match paper color #fdf4e3 */}
-          <div className="absolute inset-y-4 inset-x-0 bg-[#fdf4e3] opacity-50 z-0"></div>
-          
           {/* Actual Content Wrapper - Fixed width to prevent squashing during animation */}
           {/* We position this centered. As the parent narrows, this is clipped. */}
           <div 
-            className="relative z-10 h-full py-6 px-0 flex items-center justify-center shrink-0"
+            className="relative z-10 h-full flex items-center justify-center shrink-0"
             style={{ width: 'min(80vw, 1000px)' }}
           >
              {imageUrl && (
