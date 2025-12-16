@@ -1,0 +1,7 @@
+{
+  "name": "Ancient Scroll Painter",
+  "description": "A voice-activated generative art application that reveals ancient-style paintings within an animated scroll.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
