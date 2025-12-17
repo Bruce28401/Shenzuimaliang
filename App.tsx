@@ -21,9 +21,13 @@ const App: React.FC = () => {
     if (isListening) {
       setAppState(AppState.LISTENING);
     } else if (!isListening && appState === AppState.LISTENING) {
-      // Speech ended
-      if (transcript.trim().length > 0) {
-        handleGeneration(transcript);
+      // Speech ended (either via 5s silence or "开始作画" command)
+      
+      // Clean transcript: remove the command phrase and trim
+      const cleanPrompt = transcript.replace(/开始作画/g, '').trim();
+
+      if (cleanPrompt.length > 0) {
+        handleGeneration(cleanPrompt);
       } else {
         setAppState(AppState.IDLE);
       }

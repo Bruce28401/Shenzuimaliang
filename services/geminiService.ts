@@ -10,12 +10,21 @@ export const generateAncientPainting = async (userPrompt: string): Promise<strin
 
   const ai = new GoogleGenAI({ apiKey });
 
-  // Simplified and direct prompt to encourage image generation and reduce text-based refusals
-  const stylePrompt = `Traditional Chinese ink wash painting (Guohua) depicting ${userPrompt}. 
-  Style: Ancient masterpiece, ink on aged yellowed Xuan paper.
-  Composition: Minimalist, elegant usage of negative space (Liubai).
-  Texture: Visible paper grain, soft brush strokes fading into the background.
-  Colors: Sepia, black ink, earthy tones.`;
+  // Updated prompt logic:
+  // 1. Defaults to Black & White Ink Wash (Shanshui) if generic.
+  // 2. Adapts to specific styles (Blue-green, Gongbi, Court style) or artists (Qi Baishi, etc.) if requested.
+  const stylePrompt = `Generate a high-quality Traditional Chinese Painting based on the user request: "${userPrompt}".
+
+  Directives:
+  1. Style Adaptation: 
+     - If the user specifies a style (e.g., Blue-green landscape/Qinglü, Gongbi/Fine brush, Northern Song Court style, Figure painting/Portrait) or a specific master (e.g., Qi Baishi, Huang Binhong, Zhang Daqian), STRICTLY follow that style, color palette, and brushwork.
+     - If NO specific style/color is mentioned, DEFAULT to: Classic Ink Wash Landscape (Shanshui), Black & White ink on aged yellowed Xuan paper.
+
+  2. General Aesthetic:
+     - Medium: Chinese ink/pigments on Xuan paper or Silk.
+     - Quality: Ancient masterpiece, museum quality.
+     - Texture: Visible texture of paper/silk, authentic brush strokes.
+     - Composition: Elegant, classical Chinese composition (Liubai/negative space where appropriate).`;
 
   try {
     const response = await ai.models.generateContent({
