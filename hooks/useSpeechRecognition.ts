@@ -7,7 +7,8 @@ export const useSpeechRecognition = () => {
   const [isSupported, setIsSupported] = useState(false);
   
   const recognitionRef = useRef<any>(null);
-  const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  // Use any to avoid type issues with NodeJS.Timeout vs number in browser environment
+  const silenceTimerRef = useRef<any>(null);
 
   useEffect(() => {
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {

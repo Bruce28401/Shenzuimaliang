@@ -3,9 +3,11 @@ import { GoogleGenAI } from "@google/genai";
 const AI_MODEL = 'gemini-2.5-flash-image';
 
 export const generateAncientPainting = async (userPrompt: string): Promise<string> => {
+  // Strictly use process.env.API_KEY as per coding guidelines.
   const apiKey = process.env.API_KEY;
+  
   if (!apiKey) {
-    throw new Error("API Key not found");
+    throw new Error("API Key not found. Please set process.env.API_KEY.");
   }
 
   const ai = new GoogleGenAI({ apiKey });
