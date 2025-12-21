@@ -35,13 +35,13 @@ const App: React.FC = () => {
     setAppState(AppState.GENERATING);
     try {
       const result = await generateAncientPainting(prompt);
-      console.info(`🖌️ 作画完成。引擎: ${result.source}`);
       setGeneratedImage(result.url);
       setCurrentSource(result.source);
       setAppState(AppState.READY_TO_OPEN);
-    } catch (error) {
-      console.error("Failed to generate", error);
-      alert("作画失败，请检查 API Key 是否有效。");
+    } catch (error: any) {
+      console.error("Generation Error Details:", error);
+      // 提供更详细的报错信息
+      alert(`作画失败: ${error.message || '请检查 API Key 配置或网络连接。'}`);
       setAppState(AppState.IDLE);
       setTranscript('');
     }
@@ -77,7 +77,6 @@ const App: React.FC = () => {
     <div className="relative w-full h-screen overflow-hidden bg-[#262626] wood-texture flex flex-col items-center justify-center">
       <div className="absolute inset-0 bg-black/40 pointer-events-none"></div>
 
-      {/* 状态显示提示 (仅开发调试可见) */}
       {currentSource && (
         <div className="absolute top-4 right-4 z-50 px-3 py-1 bg-black/50 text-xs text-amber-200/50 font-mono rounded border border-amber-900/30">
           Engine: {currentSource}
