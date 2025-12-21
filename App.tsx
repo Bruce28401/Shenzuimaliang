@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { AppState } from './types';
 import { Scroll } from './components/Scroll';
@@ -21,11 +22,7 @@ const App: React.FC = () => {
     if (isListening) {
       setAppState(AppState.LISTENING);
     } else if (!isListening && appState === AppState.LISTENING) {
-      // Speech ended (either via 5s silence or "开始作画" command)
-      
-      // Clean transcript: remove the command phrase and trim
       const cleanPrompt = transcript.replace(/开始作画/g, '').trim();
-
       if (cleanPrompt.length > 0) {
         handleGeneration(cleanPrompt);
       } else {
@@ -42,16 +39,14 @@ const App: React.FC = () => {
       setAppState(AppState.READY_TO_OPEN);
     } catch (error) {
       console.error("Failed to generate", error);
-      alert("AI Painting Failed. Please try again. (API Key valid?)");
+      alert("AI Painting Failed. Please ensure API Key is set in environment.");
       setAppState(AppState.IDLE);
       setTranscript('');
     }
   };
 
-  // Auto open scroll when ready
   useEffect(() => {
     if (appState === AppState.READY_TO_OPEN) {
-      // Small delay for dramatic effect
       const timer = setTimeout(() => {
         setAppState(AppState.OPENING);
       }, 500);
@@ -60,13 +55,7 @@ const App: React.FC = () => {
   }, [appState]);
 
   const handleReset = () => {
-    // Instead of jumping to IDLE, we start the CLOSING animation
     setAppState(AppState.CLOSING);
-    // Note: We keep generatedImage to show it rolling up
-    setTranscript('');
-  };
-
-  const handleClearTranscript = () => {
     setTranscript('');
   };
 
@@ -74,23 +63,17 @@ const App: React.FC = () => {
     if (appState === AppState.OPENING) {
       setAppState(AppState.OPEN);
     } else if (appState === AppState.CLOSING) {
-      // Once closing animation finishes, wait 1 second before showing mic (IDLE)
       setTimeout(() => {
         setAppState(AppState.IDLE);
-        // Clean up image after it's fully closed and hidden
         setGeneratedImage(null); 
       }, 1000);
     }
   };
 
-  // Check for background click to reset (optional UX, sticking to button for now)
-  
   return (
     <div className="relative w-full h-screen overflow-hidden bg-[#262626] wood-texture flex flex-col items-center justify-center">
-      {/* Ambient overlay */}
       <div className="absolute inset-0 bg-black/40 pointer-events-none"></div>
 
-      {/* Decorative Title (fades out when open to focus on art) */}
       <div className={`absolute top-10 transition-opacity duration-1000 ${appState === AppState.OPEN || appState === AppState.OPENING ? 'opacity-0' : 'opacity-100'} z-10`}>
          <h1 className="text-4xl md:text-6xl text-[#d4cbb8] font-['Zhi_Mang_Xing'] drop-shadow-lg tracking-widest opacity-80">
             神嘴马良
@@ -98,7 +81,6 @@ const App: React.FC = () => {
       </div>
 
       <div className="z-10 w-full h-full">
-        {/* Pass explicit isOpen based on states where scroll should be expanded */}
         <Scroll 
           isOpen={appState === AppState.OPENING || appState === AppState.OPEN} 
           imageUrl={generatedImage}
@@ -111,9 +93,8 @@ const App: React.FC = () => {
         onStartListening={startListening}
         transcript={transcript}
         onReset={handleReset}
-        onClearTranscript={handleClearTranscript}
+        onClearTranscript={() => setTranscript('')}
       />
-      
     </div>
   );
 };
