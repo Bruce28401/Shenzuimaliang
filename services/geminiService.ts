@@ -11,47 +11,51 @@ export interface PaintingResult {
 }
 
 export const generateAncientPainting = async (userPrompt: string): Promise<PaintingResult> => {
-  const apiKey = process.env.API_KEY;
+  // Gemini 使用默认的 API_KEY
+  const geminiApiKey = process.env.API_KEY;
+  // 豆包使用独立的 DOUBAO_API_KEY
+  const doubaoApiKey = (process.env as any).DOUBAO_API_KEY || geminiApiKey; 
   
-  if (!apiKey) {
-    throw new Error("API Key not found. Please set process.env.API_KEY.");
-  }
-
   const stylePrompt = `Traditional Chinese Painting masterpiece: ${userPrompt}. Ink wash style on aged Xuan paper, museum quality, 16:9 aspect ratio.`;
 
-  // --- 尝试 Gemini ---
-  try {
-    console.log("🎨 [System] 尝试调用 Gemini 模型...");
-    const ai = new GoogleGenAI({ apiKey });
-    const response = await ai.models.generateContent({
-      model: GEMINI_MODEL,
-      contents: [{ parts: [{ text: stylePrompt }] }],
-      config: { imageConfig: { aspectRatio: "16:9" } }
-    });
+  // --- 1. 尝试调用 Gemini ---
+  if (geminiApiKey) {
+    try {
+      console.log("🎨 [System] 尝试调用 Gemini 模型...");
+      const ai = new GoogleGenAI({ apiKey: geminiApiKey });
+      const response = await ai.models.generateContent({
+        model: GEMINI_MODEL,
+        contents: [{ parts: [{ text: stylePrompt }] }],
+        config: { imageConfig: { aspectRatio: "16:9" } }
+      });
 
-    if (response.candidates?.[0]?.content?.parts) {
-      for (const part of response.candidates[0].content.parts) {
-        if (part.inlineData?.data) {
-          console.log("✅ [Success] Gemini 调用成功！");
-          return {
-            url: `data:${part.inlineData.mimeType || 'image/png'};base64,${part.inlineData.data}`,
-            source: 'Gemini'
-          };
+      if (response.candidates?.[0]?.content?.parts) {
+        for (const part of response.candidates[0].content.parts) {
+          if (part.inlineData?.data) {
+            console.log("✅ [Success] Gemini 调用成功！");
+            return {
+              url: `data:${part.inlineData.mimeType || 'image/png'};base64,${part.inlineData.data}`,
+              source: 'Gemini'
+            };
+          }
         }
       }
+    } catch (geminiError) {
+      console.warn("⚠️ [Warn] Gemini 调用失败:", geminiError);
     }
-    throw new Error("Gemini returned no image.");
-  } catch (geminiError) {
-    console.warn("⚠️ [Warn] Gemini 调用失败，正在切换至 豆包 (Doubao)...", geminiError);
+  } else {
+    console.warn("⚠️ [Warn] 未配置 Gemini API_KEY，跳过。");
+  }
 
-    // --- Fallback to Doubao ---
+  // --- 2. 备选方案：尝试调用 豆包 (Doubao) ---
+  if (doubaoApiKey) {
     try {
-      console.log(`🚀 [System] 正在向豆包发送请求: ${DOUBAO_MODEL}`);
+      console.log(`🚀 [System] 正在调用豆包模型: ${DOUBAO_MODEL}`);
       const response = await fetch(DOUBAO_ENDPOINT, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}` 
+          'Authorization': `Bearer ${doubaoApiKey}` 
         },
         body: JSON.stringify({
           model: DOUBAO_MODEL,
@@ -63,7 +67,6 @@ export const generateAncientPainting = async (userPrompt: string): Promise<Paint
 
       if (!response.ok) {
         const errorData = await response.json();
-        console.error("❌ [Error] 豆包 API 返回错误:", errorData);
         throw new Error(`Doubao API Error: ${errorData.error?.message || response.statusText}`);
       }
 
@@ -71,17 +74,18 @@ export const generateAncientPainting = async (userPrompt: string): Promise<Paint
       const imageItem = data.data?.[0];
       
       if (imageItem?.url || imageItem?.b64_json) {
-        console.log("✨ [Success] 豆包调用成功！使用的模型:", DOUBAO_MODEL);
+        console.log("✨ [Success] 豆包调用成功！");
         return {
           url: imageItem.url || `data:image/png;base64,${imageItem.b64_json}`,
           source: 'Doubao'
         };
       }
-      
       throw new Error("Doubao returned empty image data.");
     } catch (doubaoError) {
-      console.error("💀 [Fatal] 所有模型均调用失败");
-      throw doubaoError;
+      console.error("❌ [Error] 豆包模型调用也失败了:", doubaoError);
+      throw new Error("所有作画模型均不可用，请检查 API Key 配置。");
     }
+  } else {
+    throw new Error("未检测到有效的 API Key 配置（API_KEY 或 DOUBAO_API_KEY）。");
   }
 };
