@@ -1,75 +1,87 @@
+
 import { GoogleGenAI } from "@google/genai";
 
-const AI_MODEL = 'gemini-2.5-flash-image';
+const GEMINI_MODEL = 'gemini-2.5-flash-image';
+const DOUBAO_MODEL = 'doubao-seedream-4-5-251128';
+const DOUBAO_ENDPOINT = 'https://ark.cn-beijing.volces.com/api/v3/images/generations';
 
-export const generateAncientPainting = async (userPrompt: string): Promise<string> => {
-  // Strictly use process.env.API_KEY as per coding guidelines.
+export interface PaintingResult {
+  url: string;
+  source: 'Gemini' | 'Doubao';
+}
+
+export const generateAncientPainting = async (userPrompt: string): Promise<PaintingResult> => {
   const apiKey = process.env.API_KEY;
   
   if (!apiKey) {
     throw new Error("API Key not found. Please set process.env.API_KEY.");
   }
 
-  const ai = new GoogleGenAI({ apiKey });
+  const stylePrompt = `Traditional Chinese Painting masterpiece: ${userPrompt}. Ink wash style on aged Xuan paper, museum quality, 16:9 aspect ratio.`;
 
-  // Updated prompt logic:
-  // 1. Defaults to Black & White Ink Wash (Shanshui) if generic.
-  // 2. Adapts to specific styles (Blue-green, Gongbi, Court style) or artists (Qi Baishi, etc.) if requested.
-  const stylePrompt = `Generate a high-quality Traditional Chinese Painting based on the user request: "${userPrompt}".
-
-  Directives:
-  1. Style Adaptation: 
-     - If the user specifies a style (e.g., Blue-green landscape/Qinglü, Gongbi/Fine brush, Northern Song Court style, Figure painting/Portrait) or a specific master (e.g., Qi Baishi, Huang Binhong, Zhang Daqian), STRICTLY follow that style, color palette, and brushwork.
-     - If NO specific style/color is mentioned, DEFAULT to: Classic Ink Wash Landscape (Shanshui), Black & White ink on aged yellowed Xuan paper.
-
-  2. General Aesthetic:
-     - Medium: Chinese ink/pigments on Xuan paper or Silk.
-     - Quality: Ancient masterpiece, museum quality.
-     - Texture: Visible texture of paper/silk, authentic brush strokes.
-     - Composition: Elegant, classical Chinese composition (Liubai/negative space where appropriate).`;
-
+  // --- 尝试 Gemini ---
   try {
+    console.log("🎨 [System] 尝试调用 Gemini 模型...");
+    const ai = new GoogleGenAI({ apiKey });
     const response = await ai.models.generateContent({
-      model: AI_MODEL,
-      contents: [
-        {
-          parts: [
-            { text: stylePrompt }
-          ]
-        }
-      ],
-      config: {
-        imageConfig: {
-          aspectRatio: "16:9", 
-        }
-      }
+      model: GEMINI_MODEL,
+      contents: [{ parts: [{ text: stylePrompt }] }],
+      config: { imageConfig: { aspectRatio: "16:9" } }
     });
 
-    // Extract image from response
-    if (response.candidates && response.candidates.length > 0) {
-      const candidate = response.candidates[0];
-      
-      // Check for inlineData (image)
-      if (candidate.content && candidate.content.parts) {
-        for (const part of candidate.content.parts) {
-          if (part.inlineData && part.inlineData.data) {
-            const base64Data = part.inlineData.data;
-            const mimeType = part.inlineData.mimeType || 'image/png';
-            return `data:${mimeType};base64,${base64Data}`;
-          }
-        }
-        
-        // If no image found, check for text to log potential refusal reasons
-        const textPart = candidate.content.parts.find(p => p.text);
-        if (textPart && textPart.text) {
-          console.warn("Model returned text instead of image:", textPart.text);
+    if (response.candidates?.[0]?.content?.parts) {
+      for (const part of response.candidates[0].content.parts) {
+        if (part.inlineData?.data) {
+          console.log("✅ [Success] Gemini 调用成功！");
+          return {
+            url: `data:${part.inlineData.mimeType || 'image/png'};base64,${part.inlineData.data}`,
+            source: 'Gemini'
+          };
         }
       }
     }
+    throw new Error("Gemini returned no image.");
+  } catch (geminiError) {
+    console.warn("⚠️ [Warn] Gemini 调用失败，正在切换至 豆包 (Doubao)...", geminiError);
 
-    throw new Error("No image generated in the response.");
-  } catch (error) {
-    console.error("Gemini Image Generation Error:", error);
-    throw error;
+    // --- Fallback to Doubao ---
+    try {
+      console.log(`🚀 [System] 正在向豆包发送请求: ${DOUBAO_MODEL}`);
+      const response = await fetch(DOUBAO_ENDPOINT, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}` 
+        },
+        body: JSON.stringify({
+          model: DOUBAO_MODEL,
+          prompt: stylePrompt,
+          size: "1024x600",
+          n: 1
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error("❌ [Error] 豆包 API 返回错误:", errorData);
+        throw new Error(`Doubao API Error: ${errorData.error?.message || response.statusText}`);
+      }
+
+      const data = await response.json();
+      const imageItem = data.data?.[0];
+      
+      if (imageItem?.url || imageItem?.b64_json) {
+        console.log("✨ [Success] 豆包调用成功！使用的模型:", DOUBAO_MODEL);
+        return {
+          url: imageItem.url || `data:image/png;base64,${imageItem.b64_json}`,
+          source: 'Doubao'
+        };
+      }
+      
+      throw new Error("Doubao returned empty image data.");
+    } catch (doubaoError) {
+      console.error("💀 [Fatal] 所有模型均调用失败");
+      throw doubaoError;
+    }
   }
 };
